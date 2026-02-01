@@ -80,9 +80,16 @@ def submit_answer(player_color):
         st.session_state.score_history.pop()
 
 
-def display_color_box(color, label):
-    """色のボックスを表示"""
+def display_color_box(color, label, show_rgb=True):
+    """色のボックスを表示
+    
+    Args:
+        color: RGB色 (r, g, b)
+        label: 表示ラベル
+        show_rgb: RGB値を表示するかどうか
+    """
     hex_color = rgb_to_hex(*color)
+    rgb_text = f"RGB: {color}" if show_rgb else "????"
     st.markdown(
         f"""
         <div style="text-align: center;">
@@ -96,7 +103,7 @@ def display_color_box(color, label):
                 margin: auto;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             "></div>
-            <p style="margin-top: 10px; font-family: monospace;">RGB: {color}</p>
+            <p style="margin-top: 10px; font-family: monospace;">{rgb_text}</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -123,7 +130,12 @@ def main():
     col1, col2 = st.columns(2)
     
     with col1:
-        display_color_box(st.session_state.target_color, "🎯 目標の色")
+        # 目標の色：決定前はRGB値を非表示にする
+        display_color_box(
+            st.session_state.target_color, 
+            "🎯 目標の色", 
+            show_rgb=st.session_state.submitted
+        )
     
     # RGBスライダー
     st.markdown("---")
@@ -147,6 +159,7 @@ def main():
     with btn_col1:
         if st.button("✅ 決定", use_container_width=True, type="primary"):
             submit_answer(player_color)
+            st.rerun()
     
     with btn_col2:
         if st.button("🔄 新しいゲーム", use_container_width=True):
@@ -156,6 +169,8 @@ def main():
     # 結果表示
     if st.session_state.submitted and st.session_state.current_score is not None:
         score = st.session_state.current_score
+        target = st.session_state.target_color
+        player = player_color
         
         st.markdown("---")
         
@@ -168,6 +183,20 @@ def main():
             st.warning(f"🤔 もう少し！ 近似度: **{score}%**")
         else:
             st.error(f"💪 頑張って！ 近似度: **{score}%**")
+            
+        # 詳細な差分を表示
+        st.subheader("📝 詳細結果")
+        diff_cols = st.columns(3)
+        diff_r = player[0] - target[0]
+        diff_g = player[1] - target[1]
+        diff_b = player[2] - target[2]
+        
+        with diff_cols[0]:
+            st.metric("R (赤) のズレ", f"{diff_r:+d}", help="プラスは多すぎ、マイナスは足りないことを意味します")
+        with diff_cols[1]:
+            st.metric("G (緑) のズレ", f"{diff_g:+d}")
+        with diff_cols[2]:
+            st.metric("B (青) のズレ", f"{diff_b:+d}")
 
     # スコア履歴
     if st.session_state.score_history:
